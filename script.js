@@ -108,18 +108,69 @@ async function resolveLoginEmail(identifier) {
 function switchAuth(mode) {
   document.getElementById('loginForm').style.display  = mode==='login'  ? 'block' : 'none';
   document.getElementById('signupForm').style.display = mode==='signup' ? 'block' : 'none';
+  document.getElementById('forgotForm').style.display = mode==='forgot' ? 'block' : 'none';
+  document.getElementById('resetForm').style.display  = mode==='reset'  ? 'block' : 'none';
+
+  document.getElementById('authTabs').style.display = (mode==='login'||mode==='signup') ? 'flex' : 'none';
   document.querySelectorAll('.auth-tab').forEach((t,i) =>
     t.classList.toggle('active', (i===0&&mode==='login')||(i===1&&mode==='signup'))
   );
+
   document.getElementById('authMsg').className = 'auth-msg';
-  document.getElementById('authBoxTitle').textContent = mode==='login' ? 'Welcome back' : 'Create your account';
-  document.getElementById('authBoxSub').textContent   = mode==='login'
-    ? 'Sign in with your username or email.'
-    : 'Start your journey to 1,000 rejections.';
+
+  const copy = {
+    login:  ['Welcome back', 'Sign in with your username or email.'],
+    signup: ['Create your account', 'Start your journey to 1,000 rejections.'],
+    forgot: ['Reset your password', "Enter your email and we'll send you a reset link."],
+    reset:  ['Choose a new password', 'Set a new password to finish resetting your account.']
+  }[mode] || ['Welcome back', 'Sign in to continue your challenge.'];
+  document.getElementById('authBoxTitle').textContent = copy[0];
+  document.getElementById('authBoxSub').textContent   = copy[1];
 }
 function setAuthMsg(msg, type='error') {
   const el = document.getElementById('authMsg');
-  el.textContent = msg; el.className = 'auth-msg ' + type;
+  document.getElementById('authMsgIcon').textContent = type==='success' ? '✓' : (type==='error' ? '⚠' : 'ℹ');
+  document.getElementById('authMsgText').textContent = msg;
+  el.className = 'auth-msg ' + type;
+}
+
+// ── PASSWORD VISIBILITY / LIVE VALIDATION ────────────────────
+function togglePwVisibility(inputId, btn) {
+  const input = document.getElementById(inputId);
+  const showing = input.type === 'text';
+  input.type = showing ? 'password' : 'text';
+  btn.textContent = showing ? '👁️' : '🙈';
+  btn.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+}
+function setHint(id, ok, neutral) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('hint-ok','hint-bad');
+  if (!neutral) el.classList.add(ok ? 'hint-ok' : 'hint-bad');
+  el.textContent = (neutral ? '○ ' : (ok ? '✓ ' : '✕ ')) + el.dataset.label;
+}
+function checkUsernameLive() {
+  const val = document.getElementById('signupUsername').value;
+  setHint('hintULen', val.length>=3 && val.length<=20, val.length===0);
+  setHint('hintUChars', /^[a-zA-Z0-9_]+$/.test(val), val.length===0);
+}
+function checkPasswordLive() {
+  const val = document.getElementById('signupPass').value;
+  setHint('hintLen', val.length>=6, val.length===0);
+}
+
+// ── BUTTON LOADING STATE ──────────────────────────────────────
+function setBtnLoading(btn, loading, loadingText) {
+  if (typeof btn === 'string') btn = document.getElementById(btn);
+  if (!btn) return;
+  if (loading) {
+    if (btn.dataset.label === undefined) btn.dataset.label = btn.textContent;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="btn-spinner"></span>' + (loadingText || 'Loading…');
+  } else {
+    btn.disabled = false;
+    btn.textContent = btn.dataset.label !== undefined ? btn.dataset.label : btn.textContent;
+  }
 }
 
 async function doLogin() {
@@ -128,7 +179,7 @@ async function doLogin() {
   if (!identifier || !pass) { setAuthMsg('Please enter your username or email and password.'); return; }
 
   const btn = document.getElementById('loginBtn');
-  btn.disabled = true; btn.textContent = 'Signing in…';
+  setBtnLoading(btn, true, 'Signing in…');
 
   try {
     const email = await resolveLoginEmail(identifier);
@@ -137,7 +188,7 @@ async function doLogin() {
   } catch (err) {
     setAuthMsg(err.message);
   } finally {
-    btn.disabled = false; btn.textContent = 'Sign in';
+    setBtnLoading(btn, false);
   }
 }
 
@@ -159,16 +210,16 @@ async function doSignup() {
   if (pass.length < 6) { setAuthMsg('Password must be at least 6 characters.'); return; }
 
   const btn = document.getElementById('signupBtn');
-  btn.disabled = true; btn.textContent = 'Creating account…';
+  setBtnLoading(btn, true, 'Creating account…');
 
   const { data: available, error: checkErr } = await sb.rpc('is_username_available', { uname: username });
   if (checkErr) {
-    btn.disabled = false; btn.textContent = 'Create account';
+    setBtnLoading(btn, false);
     setAuthMsg('Database setup required. Run supabase-setup.sql in your Supabase SQL editor.');
     return;
   }
   if (available === false) {
-    btn.disabled = false; btn.textContent = 'Create account';
+    setBtnLoading(btn, false);
     setAuthMsg('That username is already taken. Please choose another.');
     return;
   }
@@ -179,7 +230,7 @@ async function doSignup() {
     options: { data: { username } }
   });
 
-  btn.disabled = false; btn.textContent = 'Create account';
+  setBtnLoading(btn, false);
 
   if (error) {
     setAuthMsg(error.message);
@@ -191,6 +242,36 @@ async function doSignup() {
   } else {
     setAuthMsg('Account created! Check your email to confirm, then sign in.', 'success');
   }
+}
+
+async function doForgotPassword() {
+  const email = document.getElementById('forgotEmail').value.trim();
+  if (!email || !isValidEmail(email)) { setAuthMsg('Please enter a valid email address.'); return; }
+
+  const btn = document.getElementById('forgotBtn');
+  setBtnLoading(btn, true, 'Sending…');
+  const redirectTo = window.location.href.split('#')[0].split('?')[0];
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo });
+  setBtnLoading(btn, false);
+
+  if (error) { setAuthMsg(error.message); return; }
+  setAuthMsg("If an account exists for that email, we've sent a reset link. Check your inbox.", 'success');
+}
+
+async function doSetNewPassword() {
+  const pass = document.getElementById('resetPass').value;
+  const confirmPass = document.getElementById('resetPassConfirm').value;
+  if (!pass || pass.length < 6) { setAuthMsg('Password must be at least 6 characters.'); return; }
+  if (pass !== confirmPass) { setAuthMsg('Passwords do not match.'); return; }
+
+  const btn = document.getElementById('resetBtn');
+  setBtnLoading(btn, true, 'Updating…');
+  const { error } = await sb.auth.updateUser({ password: pass });
+  setBtnLoading(btn, false);
+
+  if (error) { setAuthMsg(error.message); return; }
+  setAuthMsg('Password updated! Redirecting…', 'success');
+  setTimeout(() => { window.location.href = window.location.href.split('#')[0].split('?')[0]; }, 1500);
 }
 
 async function loadUserProfile() {
@@ -217,6 +298,12 @@ async function doLogout() { await sb.auth.signOut(); }
 
 // ── SESSION ─────────────────────────────────────────────────
 sb.auth.onAuthStateChange(async (event, session) => {
+  if (event === 'PASSWORD_RECOVERY') {
+    document.getElementById('authScreen').style.display = 'flex';
+    document.getElementById('appScreen').style.display  = 'none';
+    switchAuth('reset');
+    return;
+  }
   if (session?.user) {
     currentUser = session.user;
     document.getElementById('authScreen').style.display = 'none';
@@ -454,6 +541,207 @@ function clearEntryForm() {
   ['f_org','f_pos','f_ind','f_ask','f_feedback','f_reason','f_lesson','f_diff','f_skill','f_cbefore','f_cafter','f_hidden','f_next']
     .forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   document.getElementById('f_date').value = new Date().toISOString().slice(0,10);
+}
+
+// ── ADD-ENTRY MODE SWITCH ──────────────────────────────────────
+function switchAddMode(mode) {
+  document.getElementById('singleEntryMode').style.display = mode==='single' ? 'block' : 'none';
+  document.getElementById('bulkGridMode').style.display    = mode==='bulk'   ? 'block' : 'none';
+  document.querySelectorAll('#addModeTabs .mode-tab').forEach((t,i) =>
+    t.classList.toggle('active', (i===0&&mode==='single')||(i===1&&mode==='bulk'))
+  );
+  if (mode==='bulk' && !document.querySelector('#bulkGridBody tr')) initBulkGrid();
+}
+
+// ── BULK SPREADSHEET GRID ──────────────────────────────────────
+const BULK_COLUMNS = [
+  { key:'date',               type:'date' },
+  { key:'category',           type:'select', options:['Jobs','Internships','Clients','Sales','Scholarships','Partnerships','Investments','Networking','Other'] },
+  { key:'status',             type:'select', options:['Rejected','No Response','Pending','Accepted'] },
+  { key:'organisation',       type:'text', placeholder:'e.g. Google' },
+  { key:'position',           type:'text', placeholder:'e.g. SWE Intern' },
+  { key:'industry',           type:'text', placeholder:'e.g. Tech' },
+  { key:'method',             type:'select', options:['Email','LinkedIn','Cold Call','Walk-in','Referral','Application Portal','Networking Event','Social Media DM','Other'] },
+  { key:'what_i_asked',       type:'text', placeholder:'e.g. Internship' },
+  { key:'response_received',  type:'select', options:['No','Yes'] },
+  { key:'feedback_given',     type:'text' },
+  { key:'rejection_reason',   type:'text' },
+  { key:'lesson_learned',     type:'text' },
+  { key:'would_do_diff',      type:'text' },
+  { key:'skill_improved',     type:'text' },
+  { key:'confidence_before',  type:'number' },
+  { key:'confidence_after',   type:'number' },
+  { key:'new_contact',        type:'select', options:['No','Yes'] },
+  { key:'followup_needed',    type:'select', options:['No','Yes'] },
+  { key:'hidden_win',         type:'text' },
+  { key:'next_action',        type:'text' }
+];
+let bulkRowSeq = 0;
+
+function bulkCellHTML(rowId, col) {
+  const id = `bulk_${rowId}_${col.key}`;
+  const common = `id="${id}" data-row="${rowId}" data-col="${col.key}" class="grid-cell" onkeydown="gridCellKeydown(event,'${rowId}','${col.key}')" onpaste="gridCellPaste(event,'${rowId}','${col.key}')"`;
+  if (col.type === 'select') {
+    const opts = col.options.map(o=>`<option value="${o}">${o}</option>`).join('');
+    return `<select ${common}>${opts}</select>`;
+  }
+  if (col.type === 'number') return `<input type="number" min="1" max="10" placeholder="—" ${common}>`;
+  if (col.type === 'date')   return `<input type="date" ${common}>`;
+  return `<input type="text" placeholder="${col.placeholder||''}" ${common}>`;
+}
+function bulkRowHTML(rowId) {
+  const cells = BULK_COLUMNS.map(col => `<td>${bulkCellHTML(rowId, col)}</td>`).join('');
+  return `<tr id="bulkRow_${rowId}" data-row-id="${rowId}">
+    <td class="grid-rownum"></td>
+    ${cells}
+    <td class="grid-rowaction"><button class="btn btn-xs btn-danger" onclick="removeBulkRow('${rowId}')" title="Remove row">✕</button></td>
+  </tr>`;
+}
+function addBulkRow(focus=false) {
+  bulkRowSeq++;
+  const rowId = 'r'+bulkRowSeq;
+  document.getElementById('bulkGridBody').insertAdjacentHTML('beforeend', bulkRowHTML(rowId));
+  renumberBulkRows();
+  if (focus) {
+    const firstCell = document.getElementById(`bulk_${rowId}_${BULK_COLUMNS[0].key}`);
+    if (firstCell) firstCell.focus();
+  }
+  return rowId;
+}
+function addBulkRows(n) { for (let i=0;i<n;i++) addBulkRow(); }
+function removeBulkRow(rowId) {
+  const row = document.getElementById('bulkRow_'+rowId);
+  if (row) row.remove();
+  renumberBulkRows();
+  if (!document.querySelector('#bulkGridBody tr')) addBulkRow();
+}
+function renumberBulkRows() {
+  document.querySelectorAll('#bulkGridBody tr').forEach((tr,i) => {
+    tr.querySelector('.grid-rownum').textContent = i+1;
+  });
+}
+function clearBulkGrid() {
+  if (!confirm('Clear all rows in the grid? This cannot be undone.')) return;
+  document.getElementById('bulkGridBody').innerHTML = '';
+  bulkRowSeq = 0;
+  addBulkRows(5);
+}
+function initBulkGrid() {
+  document.getElementById('bulkGridBody').innerHTML = '';
+  bulkRowSeq = 0;
+  addBulkRows(5);
+}
+
+function focusCell(rowIdx, colIdx) {
+  const rows = document.querySelectorAll('#bulkGridBody tr');
+  if (rowIdx<0 || rowIdx>=rows.length || colIdx<0 || colIdx>=BULK_COLUMNS.length) return;
+  const cell = rows[rowIdx].querySelector(`[data-col="${BULK_COLUMNS[colIdx].key}"]`);
+  if (cell) { cell.focus(); if (cell.select) cell.select(); }
+}
+function gridCellKeydown(e, rowId, colKey) {
+  const colIdx = BULK_COLUMNS.findIndex(c=>c.key===colKey);
+  const rows = Array.from(document.querySelectorAll('#bulkGridBody tr'));
+  const rowIdx = rows.findIndex(r=>r.dataset.rowId===rowId);
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    if (rowIdx+1 >= rows.length) addBulkRow();
+    focusCell(rowIdx+1, colIdx);
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    focusCell(rowIdx-1, colIdx);
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (e.shiftKey) { focusCell(rowIdx-1, colIdx); }
+    else { if (rowIdx+1 >= rows.length) addBulkRow(); focusCell(rowIdx+1, colIdx); }
+  }
+}
+function gridCellPaste(e, rowId, colKey) {
+  const text = (e.clipboardData || window.clipboardData).getData('text');
+  if (!text || (!text.includes('\n') && !text.includes('\t'))) return; // let normal single-value paste happen
+  e.preventDefault();
+
+  const startColIdx = BULK_COLUMNS.findIndex(c=>c.key===colKey);
+  const lines = text.replace(/\r/g,'').split('\n');
+  while (lines.length && lines[lines.length-1] === '') lines.pop();
+
+  let rows = Array.from(document.querySelectorAll('#bulkGridBody tr'));
+  const startRowIdx = rows.findIndex(r=>r.dataset.rowId===rowId);
+
+  lines.forEach((line, i) => {
+    const targetRowIdx = startRowIdx + i;
+    rows = Array.from(document.querySelectorAll('#bulkGridBody tr'));
+    while (targetRowIdx >= rows.length) {
+      addBulkRow();
+      rows = Array.from(document.querySelectorAll('#bulkGridBody tr'));
+    }
+    const targetRow = rows[targetRowIdx];
+    line.split('\t').forEach((val, j) => {
+      const targetColIdx = startColIdx + j;
+      if (targetColIdx >= BULK_COLUMNS.length) return;
+      const col = BULK_COLUMNS[targetColIdx];
+      const cell = targetRow.querySelector(`[data-col="${col.key}"]`);
+      if (!cell) return;
+      if (col.type === 'select') {
+        const match = Array.from(cell.options).find(o => o.value.toLowerCase() === val.trim().toLowerCase());
+        if (match) cell.value = match.value;
+      } else {
+        cell.value = val.trim();
+      }
+    });
+  });
+  toast(`Pasted ${lines.length} row${lines.length>1?'s':''} ✓`, 'success', 1800);
+}
+
+async function saveBulkGrid() {
+  const rows = Array.from(document.querySelectorAll('#bulkGridBody tr'));
+  const payload = [];
+
+  for (const row of rows) {
+    const rowId = row.dataset.rowId;
+    const get = key => document.getElementById(`bulk_${rowId}_${key}`)?.value ?? '';
+    const org = get('organisation').trim();
+    const pos = get('position').trim();
+    const date = get('date');
+    if (!org && !pos && !date) continue; // skip blank rows
+
+    payload.push({
+      user_id: currentUser.id,
+      date: date || null,
+      category: get('category'),
+      organisation: org,
+      position: pos,
+      industry: get('industry').trim(),
+      what_i_asked: get('what_i_asked').trim(),
+      method: get('method'),
+      status: get('status'),
+      response_received: get('response_received')==='Yes',
+      feedback_given: get('feedback_given').trim(),
+      rejection_reason: get('rejection_reason').trim(),
+      lesson_learned: get('lesson_learned').trim(),
+      would_do_diff: get('would_do_diff').trim(),
+      skill_improved: get('skill_improved').trim(),
+      confidence_before: parseInt(get('confidence_before'))||null,
+      confidence_after: parseInt(get('confidence_after'))||null,
+      hidden_win: get('hidden_win').trim(),
+      new_contact: get('new_contact')==='Yes',
+      followup_needed: get('followup_needed')==='Yes',
+      next_action: get('next_action').trim()
+    });
+  }
+
+  if (!payload.length) { toast('Add at least one row with an organisation, position, or date.', 'error'); return; }
+
+  const btn = document.getElementById('saveBulkBtn');
+  setBtnLoading(btn, true, 'Saving…');
+  const { error } = await sb.from('rejection_entries').insert(payload);
+  setBtnLoading(btn, false);
+
+  if (error) { toast('Error: '+error.message, 'error'); return; }
+  toast(`${payload.length} ${payload.length===1?'entry':'entries'} saved ✓`, 'success');
+  await loadEntries();
+  initBulkGrid();
+  showPage('log', document.querySelectorAll('.nav-item')[2]);
 }
 
 async function deleteEntry(id) {
