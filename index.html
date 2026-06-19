@@ -37,21 +37,32 @@
       <div class="auth-box-title" id="authBoxTitle">Welcome back</div>
       <div class="auth-box-sub" id="authBoxSub">Sign in to continue your challenge.</div>
 
-      <div class="auth-tabs">
+      <div class="auth-tabs" id="authTabs">
         <button class="auth-tab active" onclick="switchAuth('login')">Sign in</button>
         <button class="auth-tab" onclick="switchAuth('signup')">Create account</button>
       </div>
 
-      <div id="authMsg" class="auth-msg"></div>
+      <div id="authMsg" class="auth-msg"><span id="authMsgIcon" class="auth-msg-icon"></span><span id="authMsgText"></span></div>
 
+      <!-- ── SIGN IN ── -->
       <div id="loginForm">
         <div class="field">
           <label>Username or email</label>
-          <input type="text" id="loginIdentifier" placeholder="Sam_123 or you@example.com" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
+          <div class="input-wrap">
+            <span class="input-icon">👤</span>
+            <input type="text" id="loginIdentifier" class="has-icon" placeholder="Sam_123 or you@example.com" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
+          </div>
         </div>
         <div class="field">
           <label>Password</label>
-          <input type="password" id="loginPass" placeholder="Your password" onkeydown="if(event.key==='Enter')doLogin()">
+          <div class="input-wrap">
+            <span class="input-icon">🔒</span>
+            <input type="password" id="loginPass" class="has-icon has-toggle" placeholder="Your password" onkeydown="if(event.key==='Enter')doLogin()">
+            <button type="button" class="pw-toggle" onclick="togglePwVisibility('loginPass',this)" tabindex="-1" aria-label="Show password">👁️</button>
+          </div>
+          <div style="text-align:right;margin-top:6px">
+            <a href="#" class="auth-link-sm" onclick="switchAuth('forgot');return false">Forgot password?</a>
+          </div>
         </div>
         <button class="btn btn-primary btn-full" onclick="doLogin()" id="loginBtn" style="margin-bottom:12px">Sign in</button>
         <div style="text-align:center;font-size:12px;color:var(--text-3)">
@@ -59,23 +70,77 @@
         </div>
       </div>
 
+      <!-- ── CREATE ACCOUNT ── -->
       <div id="signupForm" style="display:none">
         <div class="field">
           <label>Email address</label>
-          <input type="email" id="signupEmail" placeholder="you@example.com" autocomplete="email">
+          <div class="input-wrap">
+            <span class="input-icon">✉️</span>
+            <input type="email" id="signupEmail" class="has-icon" placeholder="you@example.com" autocomplete="email">
+          </div>
         </div>
         <div class="field">
           <label>Username</label>
-          <input type="text" id="signupUsername" placeholder="Sam_123" autocomplete="username" maxlength="20" onkeydown="if(event.key==='Enter')doSignup()">
+          <div class="input-wrap">
+            <span class="input-icon">👤</span>
+            <input type="text" id="signupUsername" class="has-icon" placeholder="Sam_123" autocomplete="username" maxlength="20" oninput="checkUsernameLive()" onkeydown="if(event.key==='Enter')doSignup()">
+          </div>
+          <div class="validation-hints">
+            <span class="hint-item" id="hintULen" data-label="3–20 characters">○ 3–20 characters</span>
+            <span class="hint-item" id="hintUChars" data-label="Letters, numbers, underscores only">○ Letters, numbers, underscores only</span>
+          </div>
         </div>
         <div class="field">
-          <label>Password <span style="color:var(--text-3);font-weight:400">(min 6 characters)</span></label>
-          <input type="password" id="signupPass" placeholder="Choose a strong password" autocomplete="new-password" onkeydown="if(event.key==='Enter')doSignup()">
+          <label>Password</label>
+          <div class="input-wrap">
+            <span class="input-icon">🔒</span>
+            <input type="password" id="signupPass" class="has-icon has-toggle" placeholder="Choose a strong password" autocomplete="new-password" oninput="checkPasswordLive()" onkeydown="if(event.key==='Enter')doSignup()">
+            <button type="button" class="pw-toggle" onclick="togglePwVisibility('signupPass',this)" tabindex="-1" aria-label="Show password">👁️</button>
+          </div>
+          <div class="validation-hints">
+            <span class="hint-item" id="hintLen" data-label="At least 6 characters">○ At least 6 characters</span>
+          </div>
         </div>
         <button class="btn btn-primary btn-full" onclick="doSignup()" id="signupBtn" style="margin-bottom:12px">Create account</button>
         <div style="text-align:center;font-size:12px;color:var(--text-3)">
           Already have an account? <a href="#" onclick="switchAuth('login');return false">Sign in</a>
         </div>
+      </div>
+
+      <!-- ── FORGOT PASSWORD ── -->
+      <div id="forgotForm" style="display:none">
+        <div class="field">
+          <label>Email address</label>
+          <div class="input-wrap">
+            <span class="input-icon">✉️</span>
+            <input type="email" id="forgotEmail" class="has-icon" placeholder="you@example.com" autocomplete="email" onkeydown="if(event.key==='Enter')doForgotPassword()">
+          </div>
+        </div>
+        <button class="btn btn-primary btn-full" onclick="doForgotPassword()" id="forgotBtn" style="margin-bottom:12px">Send reset link</button>
+        <div style="text-align:center;font-size:12px;color:var(--text-3)">
+          <a href="#" onclick="switchAuth('login');return false">← Back to sign in</a>
+        </div>
+      </div>
+
+      <!-- ── SET NEW PASSWORD (after reset link) ── -->
+      <div id="resetForm" style="display:none">
+        <div class="field">
+          <label>New password <span style="color:var(--text-3);font-weight:400">(min 6 characters)</span></label>
+          <div class="input-wrap">
+            <span class="input-icon">🔒</span>
+            <input type="password" id="resetPass" class="has-icon has-toggle" placeholder="New password" autocomplete="new-password" onkeydown="if(event.key==='Enter')doSetNewPassword()">
+            <button type="button" class="pw-toggle" onclick="togglePwVisibility('resetPass',this)" tabindex="-1" aria-label="Show password">👁️</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Confirm new password</label>
+          <div class="input-wrap">
+            <span class="input-icon">🔒</span>
+            <input type="password" id="resetPassConfirm" class="has-icon has-toggle" placeholder="Re-enter new password" autocomplete="new-password" onkeydown="if(event.key==='Enter')doSetNewPassword()">
+            <button type="button" class="pw-toggle" onclick="togglePwVisibility('resetPassConfirm',this)" tabindex="-1" aria-label="Show password">👁️</button>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-full" onclick="doSetNewPassword()" id="resetBtn" style="margin-bottom:12px">Update password</button>
       </div>
     </div>
   </div>
@@ -257,64 +322,122 @@
             </div>
           </div>
 
-          <div class="form-card">
-            <div class="form-card-header">
-              <h2>New entry</h2>
-              <p>Fill in as much detail as you can. The reflection fields are where the real growth happens.</p>
+          <div class="mode-tabs" id="addModeTabs">
+            <button class="mode-tab active" onclick="switchAddMode('single')">📝 Single entry</button>
+            <button class="mode-tab" onclick="switchAddMode('bulk')">▦ Spreadsheet / bulk add</button>
+          </div>
+
+          <!-- ══ SINGLE ENTRY MODE ══ -->
+          <div id="singleEntryMode">
+            <div class="form-card">
+              <div class="form-card-header">
+                <h2>New entry</h2>
+                <p>Fill in as much detail as you can. The reflection fields are where the real growth happens.</p>
+              </div>
+              <div class="form-card-body">
+                <div class="form-section-title">Basic information</div>
+                <div class="form-grid-3">
+                  <div class="field"><label>Date</label><input type="date" id="f_date"></div>
+                  <div class="field"><label>Category</label>
+                    <select id="f_cat"><option>Jobs</option><option>Internships</option><option>Clients</option><option>Sales</option><option>Scholarships</option><option>Partnerships</option><option>Investments</option><option>Networking</option><option>Other</option></select>
+                  </div>
+                  <div class="field"><label>Status / Outcome</label>
+                    <select id="f_status"><option>Rejected</option><option>No Response</option><option>Pending</option><option>Accepted</option></select>
+                  </div>
+                </div>
+                <div class="form-grid-2">
+                  <div class="field"><label>Organisation / Person</label><input type="text" id="f_org" placeholder="e.g. Google, John Smith"></div>
+                  <div class="field"><label>Position / Opportunity</label><input type="text" id="f_pos" placeholder="e.g. Software Engineer Intern"></div>
+                </div>
+                <div class="form-grid-3">
+                  <div class="field"><label>Industry</label><input type="text" id="f_ind" placeholder="e.g. Tech, Finance"></div>
+                  <div class="field"><label>Outreach method</label>
+                    <select id="f_method"><option>Email</option><option>LinkedIn</option><option>Cold Call</option><option>Walk-in</option><option>Referral</option><option>Application Portal</option><option>Networking Event</option><option>Social Media DM</option><option>Other</option></select>
+                  </div>
+                  <div class="field"><label>What I asked for</label><input type="text" id="f_ask" placeholder="e.g. Internship, contract work"></div>
+                </div>
+
+                <div class="form-section-title">Feedback</div>
+                <div class="form-grid-3">
+                  <div class="field"><label>Response received?</label><select id="f_resp"><option value="false">No</option><option value="true">Yes</option></select></div>
+                  <div class="field"><label>Feedback given</label><input type="text" id="f_feedback" placeholder="e.g. Overqualified"></div>
+                  <div class="field"><label>Reason for rejection</label><input type="text" id="f_reason" placeholder="e.g. Budget constraints"></div>
+                </div>
+
+                <div class="form-section-title">Reflection & growth</div>
+                <div class="form-grid-2">
+                  <div class="field"><label>Lesson learned</label><input type="text" id="f_lesson" placeholder="e.g. Follow up within 48 hours"></div>
+                  <div class="field"><label>What I'd do differently</label><input type="text" id="f_diff" placeholder="e.g. More research beforehand"></div>
+                </div>
+                <div class="form-grid-4">
+                  <div class="field"><label>Skill improved</label><input type="text" id="f_skill" placeholder="e.g. Cold emailing"></div>
+                  <div class="field"><label>Confidence before (1–10)</label><input type="number" id="f_cbefore" min="1" max="10" placeholder="7"></div>
+                  <div class="field"><label>Confidence after (1–10)</label><input type="number" id="f_cafter" min="1" max="10" placeholder="6"></div>
+                  <div class="field"><label>New contact made?</label><select id="f_contact"><option value="false">No</option><option value="true">Yes</option></select></div>
+                </div>
+                <div class="form-grid-2">
+                  <div class="field"><label>Hidden win</label><input type="text" id="f_hidden" placeholder="e.g. Learned their tech stack"></div>
+                  <div class="field"><label>Next action</label><input type="text" id="f_next" placeholder="e.g. Email again in 2 weeks"></div>
+                </div>
+                <div class="field">
+                  <label>Follow-up needed?</label>
+                  <select id="f_followup" style="width:auto"><option value="false">No</option><option value="true">Yes</option></select>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button class="btn btn-primary" onclick="saveEntry()" id="saveEntryBtn">Save entry</button>
+                <button class="btn" onclick="clearEntryForm()">Clear form</button>
+              </div>
             </div>
-            <div class="form-card-body">
-              <div class="form-section-title">Basic information</div>
-              <div class="form-grid-3">
-                <div class="field"><label>Date</label><input type="date" id="f_date"></div>
-                <div class="field"><label>Category</label>
-                  <select id="f_cat"><option>Jobs</option><option>Internships</option><option>Clients</option><option>Sales</option><option>Scholarships</option><option>Partnerships</option><option>Investments</option><option>Networking</option><option>Other</option></select>
-                </div>
-                <div class="field"><label>Status / Outcome</label>
-                  <select id="f_status"><option>Rejected</option><option>No Response</option><option>Pending</option><option>Accepted</option></select>
-                </div>
-              </div>
-              <div class="form-grid-2">
-                <div class="field"><label>Organisation / Person</label><input type="text" id="f_org" placeholder="e.g. Google, John Smith"></div>
-                <div class="field"><label>Position / Opportunity</label><input type="text" id="f_pos" placeholder="e.g. Software Engineer Intern"></div>
-              </div>
-              <div class="form-grid-3">
-                <div class="field"><label>Industry</label><input type="text" id="f_ind" placeholder="e.g. Tech, Finance"></div>
-                <div class="field"><label>Outreach method</label>
-                  <select id="f_method"><option>Email</option><option>LinkedIn</option><option>Cold Call</option><option>Walk-in</option><option>Referral</option><option>Application Portal</option><option>Networking Event</option><option>Social Media DM</option><option>Other</option></select>
-                </div>
-                <div class="field"><label>What I asked for</label><input type="text" id="f_ask" placeholder="e.g. Internship, contract work"></div>
-              </div>
+          </div>
 
-              <div class="form-section-title">Feedback</div>
-              <div class="form-grid-3">
-                <div class="field"><label>Response received?</label><select id="f_resp"><option value="false">No</option><option value="true">Yes</option></select></div>
-                <div class="field"><label>Feedback given</label><input type="text" id="f_feedback" placeholder="e.g. Overqualified"></div>
-                <div class="field"><label>Reason for rejection</label><input type="text" id="f_reason" placeholder="e.g. Budget constraints"></div>
+          <!-- ══ BULK SPREADSHEET MODE ══ -->
+          <div id="bulkGridMode" style="display:none">
+            <div class="form-card">
+              <div class="form-card-header">
+                <h2>Bulk add — spreadsheet view</h2>
+                <p>Click into a cell and type, Tab/Enter to move along, or paste a block of cells straight from Excel or Google Sheets.</p>
               </div>
-
-              <div class="form-section-title">Reflection & growth</div>
-              <div class="form-grid-2">
-                <div class="field"><label>Lesson learned</label><input type="text" id="f_lesson" placeholder="e.g. Follow up within 48 hours"></div>
-                <div class="field"><label>What I'd do differently</label><input type="text" id="f_diff" placeholder="e.g. More research beforehand"></div>
+              <div class="grid-toolbar">
+                <button class="btn btn-sm" onclick="addBulkRow(true)">＋ Add row</button>
+                <button class="btn btn-sm" onclick="addBulkRows(5)">＋ Add 5 rows</button>
+                <button class="btn btn-sm btn-danger" onclick="clearBulkGrid()">Clear grid</button>
+                <span class="grid-toolbar-hint">💡 Paste copied rows from a spreadsheet into any cell — it fills across and down automatically.</span>
               </div>
-              <div class="form-grid-4">
-                <div class="field"><label>Skill improved</label><input type="text" id="f_skill" placeholder="e.g. Cold emailing"></div>
-                <div class="field"><label>Confidence before (1–10)</label><input type="number" id="f_cbefore" min="1" max="10" placeholder="7"></div>
-                <div class="field"><label>Confidence after (1–10)</label><input type="number" id="f_cafter" min="1" max="10" placeholder="6"></div>
-                <div class="field"><label>New contact made?</label><select id="f_contact"><option value="false">No</option><option value="true">Yes</option></select></div>
-              </div>
-              <div class="form-grid-2">
-                <div class="field"><label>Hidden win</label><input type="text" id="f_hidden" placeholder="e.g. Learned their tech stack"></div>
-                <div class="field"><label>Next action</label><input type="text" id="f_next" placeholder="e.g. Email again in 2 weeks"></div>
-              </div>
-              <div class="field">
-                <label>Follow-up needed?</label>
-                <select id="f_followup" style="width:auto"><option value="false">No</option><option value="true">Yes</option></select>
+              <div class="bulk-grid-wrap">
+                <table class="bulk-grid" id="bulkGridTable">
+                  <thead>
+                    <tr id="bulkGridHeadRow">
+                      <th class="grid-rownum-h">#</th>
+                      <th>Date</th>
+                      <th>Category</th>
+                      <th>Status</th>
+                      <th>Organisation / Person</th>
+                      <th>Position / Opportunity</th>
+                      <th>Industry</th>
+                      <th>Method</th>
+                      <th>What I asked for</th>
+                      <th>Response?</th>
+                      <th>Feedback given</th>
+                      <th>Rejection reason</th>
+                      <th>Lesson learned</th>
+                      <th>I'd do differently</th>
+                      <th>Skill improved</th>
+                      <th>Conf. before</th>
+                      <th>Conf. after</th>
+                      <th>New contact?</th>
+                      <th>Follow-up?</th>
+                      <th>Hidden win</th>
+                      <th>Next action</th>
+                      <th class="grid-rowaction-h"></th>
+                    </tr>
+                  </thead>
+                  <tbody id="bulkGridBody"></tbody>
+                </table>
               </div>
             </div>
             <div class="form-actions">
-              <button class="btn btn-primary" onclick="saveEntry()" id="saveEntryBtn">Save entry</button>
-              <button class="btn" onclick="clearEntryForm()">Clear form</button>
+              <button class="btn btn-primary" onclick="saveBulkGrid()" id="saveBulkBtn">Save all rows</button>
             </div>
           </div>
         </div>
