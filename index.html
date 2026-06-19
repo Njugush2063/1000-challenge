@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>1000 Rejections Challenge</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ════════════════════════════════════════
+     AUTH SCREEN
+════════════════════════════════════════ -->
+<div id="authScreen">
+  <div class="auth-left">
+    <div class="auth-left-content">
+      <div class="auth-brand">
+        <div class="auth-brand-icon">🎯</div>
+        1000 Rejections Challenge
+      </div>
+      <div class="auth-hero-title">Turn rejection into your superpower.</div>
+      <div class="auth-hero-sub">The only challenge that transforms fear of rejection into unshakeable confidence, resilience, and opportunity.</div>
+      <div class="auth-features">
+        <div class="auth-feature"><div class="auth-feature-icon">📊</div> Track every attempt with rich context</div>
+        <div class="auth-feature"><div class="auth-feature-icon">📈</div> Visualize your growth over time</div>
+        <div class="auth-feature"><div class="auth-feature-icon">🏆</div> Earn badges and unlock milestones</div>
+        <div class="auth-feature"><div class="auth-feature-icon">💡</div> Learn from every rejection</div>
+      </div>
+    </div>
+  </div>
+  <div class="auth-right">
+    <div class="auth-box">
+      <div class="auth-box-title" id="authBoxTitle">Welcome back</div>
+      <div class="auth-box-sub" id="authBoxSub">Sign in to continue your challenge.</div>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" onclick="switchAuth('login')">Sign in</button>
+        <button class="auth-tab" onclick="switchAuth('signup')">Create account</button>
+      </div>
+
+      <div id="authMsg" class="auth-msg"></div>
+
+      <div id="loginForm">
+        <div class="field">
+          <label>Username or email</label>
+          <input type="text" id="loginIdentifier" placeholder="Sam_123 or you@example.com" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" id="loginPass" placeholder="Your password" onkeydown="if(event.key==='Enter')doLogin()">
+        </div>
+        <button class="btn btn-primary btn-full" onclick="doLogin()" id="loginBtn" style="margin-bottom:12px">Sign in</button>
+        <div style="text-align:center;font-size:12px;color:var(--text-3)">
+          Don't have an account? <a href="#" onclick="switchAuth('signup');return false">Create one</a>
+        </div>
+      </div>
+
+      <div id="signupForm" style="display:none">
+        <div class="field">
+          <label>Email address</label>
+          <input type="email" id="signupEmail" placeholder="you@example.com" autocomplete="email">
+        </div>
+        <div class="field">
+          <label>Username</label>
+          <input type="text" id="signupUsername" placeholder="Sam_123" autocomplete="username" maxlength="20" onkeydown="if(event.key==='Enter')doSignup()">
+        </div>
+        <div class="field">
+          <label>Password <span style="color:var(--text-3);font-weight:400">(min 6 characters)</span></label>
+          <input type="password" id="signupPass" placeholder="Choose a strong password" autocomplete="new-password" onkeydown="if(event.key==='Enter')doSignup()">
+        </div>
+        <button class="btn btn-primary btn-full" onclick="doSignup()" id="signupBtn" style="margin-bottom:12px">Create account</button>
+        <div style="text-align:center;font-size:12px;color:var(--text-3)">
+          Already have an account? <a href="#" onclick="switchAuth('login');return false">Sign in</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     APP SCREEN
+════════════════════════════════════════ -->
+<div id="appScreen">
+  <div class="app-shell">
+
+    <!-- ── SIDEBAR ── -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <div class="sidebar-brand-icon">🎯</div>
+        <div>
+          <div class="sidebar-brand-name">1000 Rejections Challenge </div>
+          <div class="sidebar-brand-tag">Challenge Tracker</div>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Main</div>
+        <nav class="sidebar-nav">
+          <button class="nav-item active" onclick="showPage('dashboard',this)">
+            <span class="nav-icon">⊞</span> Dashboard
+          </button>
+          <button class="nav-item" onclick="showPage('add',this)">
+            <span class="nav-icon">＋</span> Add Entry
+          </button>
+          <button class="nav-item" onclick="showPage('log',this)">
+            <span class="nav-icon">≡</span> Entries
+          </button>
+          <button class="nav-item" onclick="showPage('wins',this)">
+            <span class="nav-icon">★</span> Wins
+          </button>
+        </nav>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Insights</div>
+        <nav class="sidebar-nav">
+          <button class="nav-item" onclick="showPage('analytics',this)">
+            <span class="nav-icon">◎</span> Analytics
+          </button>
+          <button class="nav-item" onclick="showPage('milestones',this)">
+            <span class="nav-icon">◈</span> Achievements
+          </button>
+          <button class="nav-item" onclick="showPage('monthly',this)">
+            <span class="nav-icon">◷</span> Monthly Review
+          </button>
+          <button class="nav-item" onclick="showPage('yearend',this)">
+            <span class="nav-icon">◆</span> Year-End
+          </button>
+        </nav>
+      </div>
+
+      <div class="sidebar-section">
+        <nav class="sidebar-nav">
+          <button class="nav-item" onclick="showPage('settings',this)">
+            <span class="nav-icon">⚙</span> Settings
+          </button>
+        </nav>
+      </div>
+
+      <div class="sidebar-bottom">
+        <div class="user-card" onclick="showPage('settings', document.querySelector('.nav-item'))">
+          <div class="user-avatar" id="userAvatar">S</div>
+          <div class="user-info">
+            <div class="user-name" id="userEmail">Loading...</div>
+            <div class="user-role">Challenge active</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ── SIDEBAR OVERLAY (MOBILE) ── -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+    <!-- ── MAIN ── -->
+    <main class="app-main">
+      <div class="topbar">
+        <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+        <div class="topbar-title" id="topbarTitle">Dashboard</div>
+        <div class="topbar-right">
+          <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn" title="Toggle theme">🌙</button>
+          <button class="btn btn-sm btn-ghost" onclick="doLogout()" style="color:var(--text-2)">Sign out</button>
+        </div>
+      </div>
+
+      <div class="page-content">
+
+        <!-- ══ DASHBOARD ══ -->
+        <div class="page active" id="page-dashboard">
+          <div id="quoteBox" class="quote-banner"></div>
+          <div class="page-header">
+            <div class="page-header-left">
+              <h2 id="welcomeMsg">Welcome back. Keep going.</h2>
+              <p id="welcomeSub">Here's where you stand today.</p>
+            </div>
+            <div class="page-header-actions">
+              <button class="btn btn-primary btn-sm" onclick="showPage('add', document.querySelectorAll('.nav-item')[1])">+ New attempt</button>
+            </div>
+          </div>
+
+          <div class="stats-grid" id="dashStats"></div>
+
+          <div class="progress-card" id="progressCard">
+            <div class="ring-wrap">
+              <svg width="120" height="120" viewBox="0 0 120 120">
+                <defs>
+                  <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#4F46E5"/>
+                    <stop offset="100%" stop-color="#8B5CF6"/>
+                  </linearGradient>
+                </defs>
+                <circle class="ring-bg" cx="60" cy="60" r="50"/>
+                <circle class="ring-fg" id="ringFg" cx="60" cy="60" r="50" stroke-dasharray="314" stroke-dashoffset="314"/>
+              </svg>
+              <div class="ring-center">
+                <div class="ring-count" id="ringCount">0</div>
+                <div class="ring-total">of 1,000</div>
+                <div class="ring-pct" id="ringPct">0%</div>
+              </div>
+            </div>
+            <div class="progress-info">
+              <h3>Challenge Progress</h3>
+              <p id="progressMsg">Every rejection is data. Keep going — you're building something most people never attempt.</p>
+              <div class="progress-bar-row">
+                <div class="progress-bar-label">
+                  <span id="progBarLabel">0 rejections logged</span>
+                  <span id="progBarPct">0%</span>
+                </div>
+                <div class="progress-bar-track">
+                  <div class="progress-bar-fill" id="progBarFill" style="width:0%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div class="card" style="margin-bottom:0">
+              <div class="card-header">
+                <div><div class="card-title">Challenge dates</div></div>
+              </div>
+              <div class="form-grid-2">
+                <div class="field"><label>Start date</label><input type="date" id="d_start" onchange="saveDash()"></div>
+                <div class="field"><label>Target date</label><input type="date" id="d_target" onchange="saveDash()"></div>
+              </div>
+            </div>
+            <div class="card" style="margin-bottom:0">
+              <div class="card-header"><div class="card-title">Recent activity</div></div>
+              <div id="activityFeed">
+                <div class="activity-item">
+                  <div class="activity-dot"></div>
+                  <div><div class="activity-text">Start logging to see your activity</div><div class="activity-time">Just now</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top:16px">
+            <div class="card-header"><div class="card-title">Highlights</div></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div class="field"><label>Biggest win so far</label><input type="text" id="d_win" oninput="saveDash()" placeholder="e.g. Callback from Google"></div>
+              <div class="field"><label>Best opportunity pursued</label><input type="text" id="d_opp" oninput="saveDash()" placeholder="e.g. Applied to Y Combinator"></div>
+              <div class="field"><label>Most valuable lesson</label><input type="text" id="d_lesson" oninput="saveDash()" placeholder="e.g. Personalise every email"></div>
+              <div class="field"><label>Most memorable rejection</label><input type="text" id="d_rej" oninput="saveDash()" placeholder="e.g. CEO replied in one word"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══ ADD ENTRY ══ -->
+        <div class="page" id="page-add">
+          <div class="page-header">
+            <div class="page-header-left">
+              <h2>Log an attempt</h2>
+              <p>Every attempt — rejection, acceptance, or pending — counts.</p>
+            </div>
+          </div>
+
+          <div class="form-card">
+            <div class="form-card-header">
+              <h2>New entry</h2>
+              <p>Fill in as much detail as you can. The reflection fields are where the real growth happens.</p>
+            </div>
+            <div class="form-card-body">
+              <div class="form-section-title">Basic information</div>
+              <div class="form-grid-3">
+                <div class="field"><label>Date</label><input type="date" id="f_date"></div>
+                <div class="field"><label>Category</label>
+                  <select id="f_cat"><option>Jobs</option><option>Internships</option><option>Clients</option><option>Sales</option><option>Scholarships</option><option>Partnerships</option><option>Investments</option><option>Networking</option><option>Other</option></select>
+                </div>
+                <div class="field"><label>Status / Outcome</label>
+                  <select id="f_status"><option>Rejected</option><option>No Response</option><option>Pending</option><option>Accepted</option></select>
+                </div>
+              </div>
+              <div class="form-grid-2">
+                <div class="field"><label>Organisation / Person</label><input type="text" id="f_org" placeholder="e.g. Google, John Smith"></div>
+                <div class="field"><label>Position / Opportunity</label><input type="text" id="f_pos" placeholder="e.g. Software Engineer Intern"></div>
+              </div>
+              <div class="form-grid-3">
+                <div class="field"><label>Industry</label><input type="text" id="f_ind" placeholder="e.g. Tech, Finance"></div>
+                <div class="field"><label>Outreach method</label>
+                  <select id="f_method"><option>Email</option><option>LinkedIn</option><option>Cold Call</option><option>Walk-in</option><option>Referral</option><option>Application Portal</option><option>Networking Event</option><option>Social Media DM</option><option>Other</option></select>
+                </div>
+                <div class="field"><label>What I asked for</label><input type="text" id="f_ask" placeholder="e.g. Internship, contract work"></div>
+              </div>
+
+              <div class="form-section-title">Feedback</div>
+              <div class="form-grid-3">
+                <div class="field"><label>Response received?</label><select id="f_resp"><option value="false">No</option><option value="true">Yes</option></select></div>
+                <div class="field"><label>Feedback given</label><input type="text" id="f_feedback" placeholder="e.g. Overqualified"></div>
+                <div class="field"><label>Reason for rejection</label><input type="text" id="f_reason" placeholder="e.g. Budget constraints"></div>
+              </div>
+
+              <div class="form-section-title">Reflection & growth</div>
+              <div class="form-grid-2">
+                <div class="field"><label>Lesson learned</label><input type="text" id="f_lesson" placeholder="e.g. Follow up within 48 hours"></div>
+                <div class="field"><label>What I'd do differently</label><input type="text" id="f_diff" placeholder="e.g. More research beforehand"></div>
+              </div>
+              <div class="form-grid-4">
+                <div class="field"><label>Skill improved</label><input type="text" id="f_skill" placeholder="e.g. Cold emailing"></div>
+                <div class="field"><label>Confidence before (1–10)</label><input type="number" id="f_cbefore" min="1" max="10" placeholder="7"></div>
+                <div class="field"><label>Confidence after (1–10)</label><input type="number" id="f_cafter" min="1" max="10" placeholder="6"></div>
+                <div class="field"><label>New contact made?</label><select id="f_contact"><option value="false">No</option><option value="true">Yes</option></select></div>
+              </div>
+              <div class="form-grid-2">
+                <div class="field"><label>Hidden win</label><input type="text" id="f_hidden" placeholder="e.g. Learned their tech stack"></div>
+                <div class="field"><label>Next action</label><input type="text" id="f_next" placeholder="e.g. Email again in 2 weeks"></div>
+              </div>
+              <div class="field">
+                <label>Follow-up needed?</label>
+                <select id="f_followup" style="width:auto"><option value="false">No</option><option value="true">Yes</option></select>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-primary" onclick="saveEntry()" id="saveEntryBtn">Save entry</button>
+              <button class="btn" onclick="clearEntryForm()">Clear form</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══ ENTRIES / LOG ══ -->
+        <div class="page" id="page-log">
+          <div class="page-header">
+            <div class="page-header-left">
+              <h2>Entries</h2>
+              <p id="logSubtitle">All your logged attempts.</p>
+            </div>
+            <div class="page-header-actions">
+              <button class="btn btn-primary btn-sm" onclick="showPage('add', document.querySelectorAll('.nav-item')[1])">+ Add entry</button>
+            </div>
+          </div>
+
+          <div class="table-card">
+            <div class="table-controls">
+              <div class="search-input-wrap">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="logSearch" placeholder="Search by organisation, position…" oninput="renderLog()" style="background:var(--surface-2)">
+              </div>
+              <select id="filterCat" onchange="renderLog()" style="width:auto">
+                <option value="">All categories</option>
+                <option>Jobs</option><option>Internships</option><option>Clients</option><option>Sales</option>
+                <option>Scholarships</option><option>Partnerships</option><option>Investments</option><option>Networking</option><option>Other</option>
+              </select>
+              <select id="filterStatus" onchange="renderLog()" style="width:auto">
+                <option value="">All statuses</option>
+                <option>Rejected</option><option>No Response</option><option>Pending</option><option>Accepted</option>
+              </select>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr>
+                  <th style="width:40px">#</th>
+                  <th style="width:90px">Date</th>
+                  <th>Organisation</th>
+                  <th>Position</th>
+                  <th style="width:100px">Category</th>
+                  <th style="width:100px">Method</th>
+                  <th style="width:110px">Status</th>
+                  <th>Lesson</th>
+                  <th style="width:50px"></th>
+                </tr></thead>
+                <tbody id="logBody"></tbody>
+              </table>
+              <div id="logEmpty" class="table-empty" style="display:none">
+                <div class="empty-state">
+                  <div class="empty-icon">📭</div>
+                  <div class="empty-title">No entries yet</div>
+                  <div class="empty-sub">Add your first attempt — every journey starts with a single step.</div>
+                  <button class="btn btn-primary btn-sm" onclick="showPage('add', document.querySelectorAll('.nav-item')[1])">Log first attempt</button>
+                </div>
+              </div>
+              <div id="logLoading" style="padding:2rem;text-align:center;color:var(--text-3);font-size:13px">Loading entries…</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══ WINS ══ -->
+        <div class="page" id="page-wins">
+          <div class="wins-hero">
+            <div class="wins-hero-num" id="winCountBig">0</div>
+            <div class="wins-hero-label">Acceptances 🎉 Keep going — every yes is proof you belong.</div>
+          </div>
+
+          <div class="page-header">
+            <div class="page-header-left">
+              <h2>Acceptance log</h2>
+              <p>Every win is worth documenting — study what worked.</p>
+            </div>
+            <div class="page-header-actions">
+              <button class="btn btn-success btn-sm" onclick="toggleWinForm()">+ Add win</button>
+            </div>
+          </div>
+
+          <div id="addWinForm" class="form-card collapse-form" style="margin-bottom:16px">
+            <div class="form-card-header"><h2>Log a win</h2><p>Record what worked so you can repeat it.</p></div>
+            <div class="form-card-body">
+              <div class="form-grid-3">
+                <div class="field"><label>Date</label><input type="date" id="w_date"></div>
+                <div class="field"><label>Category</label>
+                  <select id="w_cat"><option>Jobs</option><option>Internships</option><option>Clients</option><option>Sales</option><option>Scholarships</option><option>Partnerships</option><option>Investments</option><option>Other</option></select>
+                </div>
+                <div class="field"><label>Organisation</label><input type="text" id="w_org" placeholder="e.g. Safaricom"></div>
+              </div>
+              <div class="form-grid-3">
+                <div class="field"><label>Opportunity</label><input type="text" id="w_opp" placeholder="e.g. IT Internship"></div>
+                <div class="field"><label>Value created</label><input type="text" id="w_value" placeholder="e.g. 3-month paid internship"></div>
+                <div class="field"><label>Why I think I succeeded</label><input type="text" id="w_why" placeholder="e.g. Tailored cover letter"></div>
+              </div>
+              <div class="field"><label>Lesson from this success</label><input type="text" id="w_lesson" placeholder="e.g. Show results, don't just describe them"></div>
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-success" onclick="saveWin()" id="saveWinBtn">Save win</button>
+              <button class="btn" onclick="toggleWinForm()">Cancel</button>
+            </div>
+          </div>
+
+          <div id="winsBody"></div>
+          <div id="winsEmpty" class="empty-state" style="display:none">
+            <div class="empty-icon">⭐</div>
+            <div class="empty-title">No acceptances yet</div>
+            <div class="empty-sub">They're coming. Keep logging attempts and the yeses will follow.</div>
+          </div>
+          <div id="winsLoading" style="padding:2rem;text-align:center;color:var(--text-3);font-size:13px">Loading…</div>
+        </div>
+
+        <!-- ══ ANALYTICS ══ -->
+        <div class="page" id="page-analytics">
+          <div class="page-header">
+            <div class="page-header-left"><h2>Analytics</h2><p>Patterns in your data that drive better decisions.</p></div>
+          </div>
+          <div class="insight-card" id="insightCard">
+            <div class="insight-label">💡 Top insight</div>
+            <div class="insight-text" id="insightText">Log more entries to unlock personalised insights about your outreach patterns.</div>
+          </div>
+          <div class="analytics-grid-2">
+            <div class="chart-box">
+              <div class="chart-header"><div><div class="chart-label">Rejections by category</div><div class="chart-sublabel">Where you're putting your effort</div></div></div>
+              <div class="chart-wrap"><canvas id="catChart" role="img" aria-label="Rejections by category">Bar chart of rejections per category.</canvas></div>
+            </div>
+            <div class="chart-box">
+              <div class="chart-header"><div><div class="chart-label">Monthly volume</div><div class="chart-sublabel">Last 6 months</div></div></div>
+              <div class="chart-wrap"><canvas id="monthChart" role="img" aria-label="Rejections per month">Monthly rejection count.</canvas></div>
+            </div>
+          </div>
+          <div class="chart-box">
+            <div class="chart-header"><div><div class="chart-label">Outreach method breakdown</div><div class="chart-sublabel">How you're reaching out</div></div></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;align-items:center">
+              <div class="chart-wrap" style="height:200px"><canvas id="methodChart" role="img" aria-label="Outreach method doughnut">Methods breakdown.</canvas></div>
+              <div id="methodLegend" style="font-size:13px"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══ MILESTONES ══ -->
+        <div class="page" id="page-milestones">
+          <div class="page-header">
+            <div class="page-header-left"><h2>Achievements</h2><p>Milestones unlocked through consistent action.</p></div>
+          </div>
+          <h4 style="margin-bottom:12px">Rejection milestones</h4>
+          <div class="milestones-grid" id="milestoneGrid"></div>
+          <h4 style="margin:20px 0 12px">Special achievements <span style="font-size:11px;color:var(--text-3);text-transform:none;font-weight:400;letter-spacing:0">(click to toggle)</span></h4>
+          <div class="specials-grid" id="specialGrid"></div>
+        </div>
+
+        <!-- ══ MONTHLY REVIEW ══ -->
+        <div class="page" id="page-monthly">
+          <div class="page-header">
+            <div class="page-header-left"><h2>Monthly review</h2><p>Reflect, learn, and plan ahead.</p></div>
+            <div class="page-header-actions">
+              <select id="monthSelect" onchange="loadMonthData()" style="font-size:13px;width:auto"></select>
+            </div>
+          </div>
+          <div class="stats-grid" id="monthMetrics" style="margin-bottom:20px"></div>
+          <div class="month-two-col">
+            <div class="card" style="margin-bottom:0">
+              <div class="card-header"><div class="card-title">Personal growth</div></div>
+              <div class="field"><label>Biggest lesson</label><textarea id="m_lesson" oninput="saveMonth()" placeholder="What did you learn this month?"></textarea></div>
+              <div class="field"><label>Biggest win</label><textarea id="m_win" oninput="saveMonth()" placeholder="What went well?"></textarea></div>
+              <div class="field"><label>Biggest mistake</label><textarea id="m_mistake" oninput="saveMonth()" placeholder="What would you do differently?"></textarea></div>
+              <div class="field"><label>Most courageous attempt</label><textarea id="m_courage" oninput="saveMonth()" placeholder="What took the most guts?"></textarea></div>
+              <div class="field"><label>Best feedback received</label><textarea id="m_bfeed" oninput="saveMonth()" placeholder="Most valuable thing someone told you"></textarea></div>
+            </div>
+            <div class="card" style="margin-bottom:0">
+              <div class="card-header"><div class="card-title">Improvement plan</div></div>
+              <div class="field"><label>What worked</label><textarea id="m_worked" oninput="saveMonth()" placeholder="Approaches that produced results"></textarea></div>
+              <div class="field"><label>What didn't work</label><textarea id="m_didnt" oninput="saveMonth()" placeholder="What to stop or change"></textarea></div>
+              <div class="field"><label>What I'll improve next month</label><textarea id="m_improve" oninput="saveMonth()" placeholder="Specific, actionable improvement"></textarea></div>
+              <div class="field"><label>Top 3 goals for next month</label><textarea id="m_goals" oninput="saveMonth()" placeholder="1. &#10;2. &#10;3. " rows="4"></textarea></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══ YEAR-END ══ -->
+        <div class="page" id="page-yearend">
+          <div class="page-header">
+            <div class="page-header-left"><h2>Year-end reflection</h2><p>Look back at the full journey and celebrate how far you've come.</p></div>
+          </div>
+          <div class="stats-grid" id="yearMetrics" style="margin-bottom:20px"></div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Reflection questions</div></div>
+            <div class="field"><label>Who did I become through this challenge?</label><textarea id="y_became" oninput="saveYear()" rows="3" placeholder="Describe the person you've grown into…"></textarea></div>
+            <div class="field"><label>What was my greatest lesson?</label><textarea id="y_lesson" oninput="saveYear()" rows="3" placeholder="The single most important thing you learned…"></textarea></div>
+            <div class="field"><label>What opportunity changed my life?</label><textarea id="y_opp" oninput="saveYear()" rows="3" placeholder="The one that made it all worth it…"></textarea></div>
+            <div class="field"><label>What fear did I overcome?</label><textarea id="y_fear" oninput="saveYear()" rows="3" placeholder="What no longer scares you…"></textarea></div>
+            <div class="field"><label>What would I tell someone starting this challenge?</label><textarea id="y_advice" oninput="saveYear()" rows="3" placeholder="Your advice to your past self…"></textarea></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Full journey journal</div></div>
+            <div class="field"><textarea id="y_journal" oninput="saveYear()" rows="14" placeholder="Write your complete journey here — the highs, the lows, the unexpected turns, and who you became. This is your story."></textarea></div>
+          </div>
+        </div>
+
+        <!-- ══ SETTINGS ══ -->
+        <div class="page" id="page-settings">
+          <div class="page-header">
+            <div class="page-header-left"><h2>Settings</h2><p>Manage your account and preferences.</p></div>
+          </div>
+          <div class="card">
+            <div class="settings-section">
+              <div class="settings-title">Account</div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Username</div>
+                  <div class="settings-row-sub" id="settingsUsername">—</div>
+                </div>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Email address</div>
+                  <div class="settings-row-sub" id="settingsEmail">—</div>
+                </div>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Dark mode</div>
+                  <div class="settings-row-sub">Switch between light and dark themes</div>
+                </div>
+                <button class="btn btn-sm" onclick="toggleTheme()" id="themeBtnSettings">Switch to dark</button>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Sign out</div>
+                  <div class="settings-row-sub">Sign out of your account on this device</div>
+                </div>
+                <button class="btn btn-sm btn-danger" onclick="doLogout()">Sign out</button>
+              </div>
+            </div>
+          </div>
+          <div class="card" style="border-color:#FECACA">
+            <div class="settings-section">
+              <div class="settings-title" style="color:var(--rose)">Danger zone</div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Delete account</div>
+                  <div class="settings-row-sub">Permanently delete your account and all data. This cannot be undone.</div>
+                </div>
+                <button class="btn btn-sm btn-danger" onclick="alert('Please contact support to delete your account.')">Delete account</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /page-content -->
+    </main>
+  </div>
+</div>
+
+<button class="fab" id="fab" onclick="showPage('add', document.querySelectorAll('.nav-item')[1])" title="Add new entry" style="display:none">+</button>
+<div id="toast"></div>
+
+<script src="script.js"></script>
+</body>
+</html>
