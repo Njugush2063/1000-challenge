@@ -276,7 +276,20 @@ async function doSetNewPassword() {
 
 async function loadUserProfile() {
   if (!currentUser) return;
-  const { data } = await sb.from('profiles').select('username, email').eq('id', currentUser.id).single();
+
+  // Retry up to 4 times with increasing delay — the profiles row is created by a
+  // DB trigger that fires after signUp, so it may not exist on the very first query.
+  let data = null;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    if (attempt > 0) await new Promise(r => setTimeout(r, attempt * 600));
+    const { data: row } = await sb
+      .from('profiles')
+      .select('username, email')
+      .eq('id', currentUser.id)
+      .single();
+    if (row) { data = row; break; }
+  }
+
   userProfile = data || {
     username: currentUser.user_metadata?.username || null,
     email: currentUser.email
@@ -294,14 +307,42 @@ function updateUserDisplay() {
   if (settingsUsername) settingsUsername.textContent = userProfile?.username || '—';
 }
 
-async function doLogout() { await sb.auth.signOut(); }
+async function doLogout() {
+  const btns = document.querySelectorAll('[onclick="doLogout()"]');
+  btns.forEach(b => { b.disabled = true; b.textContent = 'Signing out…'; });
+  try {
+    const { error } = await sb.auth.signOut();
+    if (error) throw error;
+  } catch (err) {
+    // Even if signOut call fails, force the UI back to auth screen
+    console.warn('signOut error:', err);
+    currentUser = null; userProfile = null; entries = []; wins = [];
+    document.getElementById('authScreen').style.display = 'flex';
+    document.getElementById('appScreen').style.display  = 'none';
+    document.getElementById('fab').style.display = 'none';
+  } finally {
+    btns.forEach(b => { b.disabled = false; b.textContent = 'Sign out'; });
+  }
+}
 
 // ── SESSION ─────────────────────────────────────────────────
+let _appLoaded = false; // prevent re-running initApp on every token refresh
+
 sb.auth.onAuthStateChange(async (event, session) => {
   if (event === 'PASSWORD_RECOVERY') {
     document.getElementById('authScreen').style.display = 'flex';
     document.getElementById('appScreen').style.display  = 'none';
     switchAuth('reset');
+    return;
+  }
+  if (event === 'SIGNED_OUT') {
+    _appLoaded = false;
+    currentUser = null; userProfile = null;
+    document.getElementById('authScreen').style.display = 'flex';
+    document.getElementById('appScreen').style.display  = 'none';
+    document.getElementById('fab').style.display = 'none';
+    entries = []; wins = [];
+    switchAuth('login');
     return;
   }
   if (session?.user) {
@@ -311,14 +352,10 @@ sb.auth.onAuthStateChange(async (event, session) => {
     document.getElementById('fab').style.display = 'flex';
     document.getElementById('themeBtn').textContent = isDark ? '☀️' : '🌙';
     await loadUserProfile();
-    await initApp();
-  } else {
-    currentUser = null;
-    userProfile = null;
-    document.getElementById('authScreen').style.display = 'flex';
-    document.getElementById('appScreen').style.display  = 'none';
-    document.getElementById('fab').style.display = 'none';
-    entries = []; wins = [];
+    if (!_appLoaded) {
+      _appLoaded = true;
+      await initApp();
+    }
   }
 });
 
