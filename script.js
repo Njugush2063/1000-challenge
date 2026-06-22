@@ -313,15 +313,17 @@ async function doLogout() {
   try {
     const { error } = await sb.auth.signOut();
     if (error) throw error;
+    // Redirect to clean URL — clears all state and shows login screen
+    window.location.href = window.location.href.split('#')[0].split('?')[0];
   } catch (err) {
-    // Even if signOut call fails, force the UI back to auth screen
     console.warn('signOut error:', err);
+    btns.forEach(b => { b.disabled = false; b.textContent = 'Sign out'; });
+    // Force UI reset even if the API call failed
     currentUser = null; userProfile = null; entries = []; wins = [];
     document.getElementById('authScreen').style.display = 'flex';
     document.getElementById('appScreen').style.display  = 'none';
     document.getElementById('fab').style.display = 'none';
-  } finally {
-    btns.forEach(b => { b.disabled = false; b.textContent = 'Sign out'; });
+    switchAuth('login');
   }
 }
 
